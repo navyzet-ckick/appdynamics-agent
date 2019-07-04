@@ -25,6 +25,7 @@
         unarchive:
           src: /tmp/machineagent.zip
           dest: /opt/appdynamics/machine-agent
+          remote_src: true
 
       - name: Install systemd service
         copy:
