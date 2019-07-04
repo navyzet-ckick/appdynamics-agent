@@ -1,0 +1,54 @@
+- hosts: appdynamics_agent
+  become: true
+  vars:
+    #archive_url: http://storage.com/machineagent-bundle-64bit-linux-4.5.9.2096.zip
+
+  tasks:
+    - name: Check if appdynamics agent already installed
+      stat:
+        path: /etc/systemd/system/appdynamics-machine-agent.service
+      register: agent_installed
+
+    - block:
+      - name: appdynamics agent folder
+        file:
+          path: /opt/appdynamics/machine-agent
+          state: directory
+          recurse: true
+
+      - name: Download agent
+        get_url:
+          url: "{{ archive_url }}"
+          dest: /tmp/machineagent.zip
+
+      - name: Unpacks zip
+        unarchive:
+          src: /tmp/machineagent.zip
+          dest: /opt/appdynamics/machine-agent
+
+      - name: Install systemd service
+        copy:
+          src: /opt/appdynamics/machine-agent/etc/systemd/system/appdynamics-machine-agent.service
+          dest: /etc/systemd/system/appdynamics-machine-agent.service
+          remote_src: true
+        register: install_service
+        notify:
+          - Restart agent
+
+      - name: Enable appdynamics agent
+        systemd:
+          name: appdynamics-machine-agent.service
+          enabled: true
+          daemon_reload: true
+
+      - name: Start appdynamics agent
+        systemd:
+          name: appdynamics-machine-agent.service
+          state: started
+      when: agent_installed.stat.exists == false
+
+  handlers:
+    - name: Restart agent
+      systemd:
+        name: appdynamics-machine-agent.service
+        state: restarted

@@ -1,0 +1,34 @@
+- hosts: appdynamics_agent
+  become: true
+
+  tasks:
+    - name: Check if appdynamics agent already installed
+      stat:
+        path: /etc/systemd/system/appdynamics-machine-agent.service
+      register: agent_installed
+
+    - block:
+      - name: Stop appdynamics agent
+        systemd:
+          name: appdynamics-machine-agent.service
+          state: stopped
+
+      - name: Remove systemd service
+        file:
+          path: /etc/systemd/system/appdynamics-machine-agent.service
+          state: absent
+        notify:
+          - Reload systemd
+
+      - name: appdynamics agent folder
+        file:
+          path: /opt/appdynamics/machine-agent
+          state: absent
+          recurse: true
+
+      when: agent_installed.stat.exists == true
+
+  handlers:
+    - name: Reload systemd
+      systemd:
+        daemon_reload: true
